@@ -95,37 +95,53 @@ npm run dev
 ```
 
 ## 📚 API Documentation  
-**Key Endpoints**  
 
-| Endpoint | Method | Description |  
-|----------|--------|-------------|  
-| `/api/users/register` | POST | Create new account |  
-| `/api/teams` | POST | Submit new team |  
-| `/api/contests` | GET | List active contests |  
-| `/api/scores/live` | WS | Live score updates |  
+| Service          | Endpoint                     | HTTP Method | Links to Smart Contract?          | Contract Function (Cairo)     |
+|------------------|------------------------------|-------------|------------------------------------|-------------------------------|
+| **Auth**         | `/auth/nonce`                | POST        | ❌ No                              | -                             |
+|                  | `/auth/verify`               | POST        | ❌ No                              | -                             |
+| **Contest**      | `/contests`                  | GET         | ❌ No                              | -                             |
+|                  | `/contests`                  | POST        | ❌ No (Admin-only setup)           | -                             |
+|                  | `/contests/:id/join`         | POST        | ✅ Yes                             | `PrizePool.lock_entry_fee`*   |
+| **Team**         | `/teams`                     | POST        | ✅ Yes                             | `TeamValidation.validate_team`|
+|                  | `/teams/:userId`             | GET         | ❌ No                              | -                             |
+| **Scoring**      | `/scores/live`               | GET (WS)    | ❌ No (Uses Redis cache)           | -                             |
+|                  | `/scores/sync`               | POST        | ✅ Yes (Indirect via workers)      | `ScoringEngine.update_score`  |
 
-**Sample Request**  
-```bash
-curl -X POST 'http://localhost:8080/api/teams' \
-  -H 'Authorization: Bearer <JWT>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "contestId": "123",
-    "players": [45, 89, 234, ...],
-    "captainId": 89
-  }'
-```
+---
 
-## 🌐 Deployment  
-```bash
-# Build Docker images  
-docker build -t fantasy-backend ./backend  
-docker build -t fantasy-frontend ./frontend
+### **Smart Contract Endpoints (Cairo Functions)**  
+| Contract            | Function                  | Called By                             | Linked API Endpoint(s)                |
+|---------------------|---------------------------|---------------------------------------|----------------------------------------|
+| **TeamValidation**  | `validate_team`           | Team Service (on team submission)     | `POST /teams`                          |
+| **ScoringEngine**   | `update_score`            | Python Data Worker (via RabbitMQ)     | `POST /scores/sync` (indirect trigger) |
+| **PrizePool**       | `lock_entry_fee`*         | Contest Service (on contest join)     | `POST /contests/:id/join`              |
+|                     | `distribute_prizes`       | Backend (automated payout trigger)    | Internal process (no direct API link)  |
 
-# Kubernetes deployment  
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-```
+---
+
+### **Key Linkages**  
+1. **Team Submission**  
+   - `POST /teams` → Calls `TeamValidation.validate_team` to verify team rules on-chain.  
+
+2. **Contest Join**  
+   - `POST /contests/:id/join` → Interacts with `PrizePool.lock_entry_fee` (hypothetical function) to lock entry fees in escrow.  
+
+3. **Live Scoring**  
+   - `POST /scores/sync` → Python worker processes data and triggers `ScoringEngine.update_score` via RabbitMQ.  
+
+4. **Payout Automation**  
+   - Backend triggers `PrizePool.distribute_prizes` after match ends (no direct API endpoint).  
+
+---
+
+### Notes:  
+- The `PrizePool.lock_entry_fee` function is implied in the workflow (not explicitly shown in the Cairo example) but would handle fee locking.  
+- `PrizePool.distribute_prizes` is called internally after Chainlink confirms match results.  
+- WebSocket (`/scores/live`) reflects data updated by `ScoringEngine` contract but doesn’t directly invoke it.  
+
+This mapping ensures **on-chain validation** for critical actions (team submission, prize distribution) while keeping non-critical paths (auth, data fetching) off-chain for speed.
+
 
 ## 📜 License  
 MIT License - See [LICENSE](LICENSE) for details.
