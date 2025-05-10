@@ -1,39 +1,50 @@
-import Redis from "ioredis"
+import { createClient, RedisClientType } from 'redis';
 
-// Singleton pattern to reuse the Redis connection across API routes
-let redis: Redis | null = null
+let redisClient: RedisClientType | null = null;
 
-export function getRedisClient(): Redis {
-  if (!redis) {
-    redis = new Redis({
-      host: process.env.REDIS_HOST || "localhost",
-      port: Number.parseInt(process.env.REDIS_PORT || "6379"),
-      password: process.env.REDIS_PASSWORD,
-      // Add any other configurations you need
-      retryStrategy: (times) => {
-        // Retry connection with exponential backoff
-        const delay = Math.min(times * 50, 2000)
-        return delay
-      },
-    })
+export const getRedisClient = async (): Promise<RedisClientType> => {
+  if (!redisClient) {
+    try {
+      redisClient = createClient({
+        url: process.env.REDIS_URL || 'redis://localhost:6379',
+      });
 
-    redis.on("error", (err) => {
-      console.error("Redis connection error:", err)
-      redis = null
-    })
-
-    redis.on("connect", () => {
-      console.log("Connected to Redis")
-    })
+      redisClient.on('error', (err) => {
+        console.error('Redis client error:', err);
+        redisClient = null; 
+      });
+    } catch (error) {
+      console.error('Failed to create Redis client:', error);
+      throw error;
+    }
   }
 
-  return redis
-}
-
-// Graceful shutdown - important for Next.js deployment environments
-export async function closeRedisConnection(): Promise<void> {
-  if (redis) {
-    await redis.quit()
-    redis = null
+  try {
+    if (redisClient && !redisClient.isOpen) {
+      await redisClient.connect();
+    }
+    return redisClient;
+  } catch (error) {
+    console.error('Failed to connect to Redis:', error);
+    redisClient = null;
+    throw error;
   }
-}
+};
+
+export const redis = (): RedisClientType => {
+  if (!redisClient) {
+    throw new Error('Redis client is not initialized. Call getRedisClient first.');
+  }
+  return redisClient;
+};
+
+export const closeRedisConnection = async (): Promise<void> => {
+  if (redisClient && redisClient.isOpen) {
+    try {
+      await redisClient.quit();
+    } catch (error) {
+      console.error('Error disconnecting from Redis:', error);
+    }
+    redisClient = null;
+  }
+};
