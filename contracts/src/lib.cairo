@@ -1,25 +1,34 @@
-fn main() -> u32 {
-    fib(16)
+/// Interface representing `HelloContract`.
+/// This interface allows modification and retrieval of the contract balance.
+#[starknet::interface]
+pub trait IHelloStarknet<TContractState> {
+    /// Increase contract balance.
+    fn increase_balance(ref self: TContractState, amount: felt252);
+    /// Retrieve contract balance.
+    fn get_balance(self: @TContractState) -> felt252;
 }
 
-fn fib(mut n: u32) -> u32 {
-    let mut a: u32 = 0;
-    let mut b: u32 = 1;
-    while n != 0 {
-        n = n - 1;
-        let temp = b;
-        b = a + b;
-        a = temp;
-    };
-    a
-}
+/// Simple contract for managing balance.
+#[starknet::contract]
+mod HelloStarknet {
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
 
-#[cfg(test)]
-mod tests {
-    use super::fib;
+    #[storage]
+    struct Storage {
+        balance: felt252,
+    }
 
-    #[test]
-    fn it_works() {
-        assert(fib(16) == 987, 'it works!');
+    #[abi(embed_v0)]
+    impl HelloStarknetImpl of super::IHelloStarknet<ContractState> {
+        fn increase_balance(ref self: ContractState, amount: felt252) {
+            assert(amount != 0, 'Amount cannot be 0');
+            self.balance.write(self.balance.read() + amount);
+        }
+
+        fn get_balance(self: @ContractState) -> felt252 {
+            self.balance.read()
+        }
     }
 }
+
+pub mod ScoringEngine;

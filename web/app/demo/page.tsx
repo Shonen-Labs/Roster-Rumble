@@ -7,13 +7,7 @@ export default function DemoPage() {
   const { showToast, pendingTransactions } = useToaster();
 
   const simulateTransaction = (status: 'success' | 'error') => {
-    // First show a pending toast
-    const toastId = showToast('Processing transaction...', 'pending', {
-      txHash: `0x${Math.random().toString(16).substring(2, 42)}`,
-      network: 'mainnet'
-    });
 
-    // After some time, update to success/error
     setTimeout(() => {
       showToast(
         status === 'success' 
@@ -29,7 +23,7 @@ export default function DemoPage() {
     for (let i = 0; i < 5; i++) {
       setTimeout(() => {
         showToast(`Toast notification ${i + 1}`, 'success', {
-          autoDismiss: 3000 // 3 seconds
+          autoDismiss: 3000 
         });
       }, i * 1000);
     }
