@@ -144,7 +144,7 @@ This mapping ensures **on-chain validation** for critical actions (team submissi
 
 
 ## 📜 License  
-MIT License - See [LICENSE](LICENSE) for details.
+MIT License - See [LICENSE](https://opensource.org/license/mit) for details.
 
 ---
 
