@@ -100,13 +100,15 @@ describe('Contest API', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset pool.connect to resolve fakeClient
+    (pool.connect as jest.Mock).mockResolvedValue(fakeClient);
     (fakeClient.release as jest.Mock).mockResolvedValue(undefined);
     mockRedisClient.get.mockResolvedValue(null);
     mockRedisClient.setEx.mockResolvedValue('OK');
     mockRedisClient.del.mockResolvedValue(1);
     mockRedisClient.keys.mockResolvedValue([]);
     (fakeClient.query as jest.Mock).mockClear();
-  });
+  });  
 
   describe('POST /api/contests', () => {
     it('returns 401 when no token provided', async () => {
