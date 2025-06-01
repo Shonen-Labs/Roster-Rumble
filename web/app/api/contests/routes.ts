@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
     if (!countResult.rows || !countResult.rows[0]) {
       throw new Error('Failed to retrieve total count');
     }
-    const total = parseInt(countResult.rows[0].total || '0', 10);
+    const total = countResult.rows[0] ? parseInt(countResult.rows[0].total || '0', 10) : 0;
 
     // Get paginated data
     const offset = (queryParams.page - 1) * queryParams.limit;
