@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import jwt from "jsonwebtoken"
-import crypto from "crypto"
 import { getRedisClient } from './redis';
 
 export async function verifyNonce(walletAddress: string, nonce: string): Promise<boolean> {

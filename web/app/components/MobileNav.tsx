@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -33,6 +34,7 @@ export default function MobileNav() {
   }, []);
 
   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const throttledDragEnd = useCallback(
     (() => {
       let lastCall = 0;

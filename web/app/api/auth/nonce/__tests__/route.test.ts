@@ -1,7 +1,6 @@
 import { GET } from '../route';
 import { NextRequest } from 'next/server';
 import { getRedisClient, redis } from '@/lib/redis';
-import { randomBytes } from 'crypto';
 
 jest.mock('crypto', () => {
   let counter = 0;
