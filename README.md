@@ -1,4 +1,5 @@
-# Fantasy Sports Platform 🏆⚡
+Not Currently WIP
+<!-- # Fantasy Sports Platform 🏆⚡
 
 **A scalable, real-time fantasy sports platform with automated scoring and rewards**
 
@@ -149,4 +150,4 @@ MIT License - See [LICENSE](LICENSE) for details.
 ---
 
 **🏆 Start building your fantasy sports empire today!**  
-```
+``` -->
