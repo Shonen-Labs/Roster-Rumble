@@ -145,7 +145,7 @@ export function Header() {
             >
               <div className="container mx-auto px-4 py-6">
                 <nav className="space-y-2">
-                  {menuItems.map((item, index) => (
+                  {menuItems.map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
