@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import jwt from 'jsonwebtoken';
-import { Pool } from 'pg';
-import amqp from 'amqplib';
-import { getRedisClient } from '@/lib/redis';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import jwt from "jsonwebtoken";
+import { Pool } from "pg";
+import amqp from "amqplib";
+import { getRedisClient } from "@/lib/redis";
 
 const DATABASE_URL = process.env.DATABASE_URL!;
 const JWT_SECRET = process.env.JWT_SECRET!;
 const RABBITMQ_URL = process.env.RABBITMQ_URL!;
 
 if (!DATABASE_URL || !JWT_SECRET || !RABBITMQ_URL) {
-  throw new Error('Missing required environment variables.');
+  throw new Error("Missing required environment variables.");
 }
 
 // PostgreSQL pool
@@ -22,7 +22,7 @@ const contestSchema = z.object({
   sport: z.string(),
   entryFee: z.number().nonnegative(),
   startsAt: z.string().refine((date: string) => !isNaN(Date.parse(date)), {
-    message: 'Invalid ISO8601 date string',
+    message: "Invalid ISO8601 date string",
   }),
   maxPlayers: z.number().int().positive(),
 });
@@ -42,12 +42,12 @@ type ContestQuery = z.infer<typeof contestQuerySchema>;
 // Helper: verify JWT and check admin
 export function verifyAdmin(token: string | undefined) {
   if (!token) {
-    throw new Error('No token provided');
+    throw new Error("No token provided");
   }
   try {
     const payload = jwt.verify(token, JWT_SECRET) as any;
-    if (payload.role !== 'admin') {
-      throw new Error('Forbidden');
+    if (payload.role !== "admin") {
+      throw new Error("Forbidden");
     }
     return payload;
   } catch (err) {
@@ -61,7 +61,7 @@ export async function getMqChannel() {
   if (mqChannel) return mqChannel;
   const conn = await amqp.connect(RABBITMQ_URL);
   const channel = await conn.createChannel();
-  await channel.assertExchange('contest.events', 'fanout', { durable: true });
+  await channel.assertExchange("contest.events", "fanout", { durable: true });
   mqChannel = channel;
   return mqChannel;
 }
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
 
     // Build query params object
     const rawQuery: Record<string, string> = {};
-    for (const key of ['sport', 'minFee', 'maxFee', 'page', 'limit'] as const) {
+    for (const key of ["sport", "minFee", "maxFee", "page", "limit"] as const) {
       const v = searchParams.get(key);
       if (v !== null) rawQuery[key] = v;
     }
@@ -86,7 +86,10 @@ export async function GET(req: NextRequest) {
     } catch (validationError) {
       if (validationError instanceof z.ZodError) {
         return NextResponse.json(
-          { error: 'Invalid query parameters', details: validationError.errors },
+          {
+            error: "Invalid query parameters",
+            details: validationError.errors,
+          },
           { status: 400 }
         );
       }
@@ -115,7 +118,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(parsed, { status: 200 });
       }
     } catch (cacheErr) {
-      console.warn('Redis cache error, proceeding without cache:', cacheErr);
+      console.warn("Redis cache error, proceeding without cache:", cacheErr);
     }
 
     // Build SQL query with filters
@@ -140,15 +143,19 @@ export async function GET(req: NextRequest) {
       paramIndex++;
     }
 
-    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = conditions.length
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
 
     // Get total count
     const countQuery = `SELECT COUNT(*) AS total FROM contests ${whereClause}`;
     const countResult = await client.query(countQuery, values);
     if (!countResult.rows || !countResult.rows[0]) {
-      throw new Error('Failed to retrieve total count');
+      throw new Error("Failed to retrieve total count");
     }
-    const total = countResult.rows[0] ? parseInt(countResult.rows[0].total || '0', 10) : 0;
+    const total = countResult.rows[0]
+      ? parseInt(countResult.rows[0].total || "0", 10)
+      : 0;
 
     // Get paginated data
     const offset = (queryParams.page - 1) * queryParams.limit;
@@ -165,7 +172,11 @@ export async function GET(req: NextRequest) {
       ORDER BY starts_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
-    const dataResult = await client.query(dataQuery, [...values, queryParams.limit, offset]);
+    const dataResult = await client.query(dataQuery, [
+      ...values,
+      queryParams.limit,
+      offset,
+    ]);
 
     const response = {
       contests: dataResult.rows || [],
@@ -180,19 +191,22 @@ export async function GET(req: NextRequest) {
       const redis = await getRedisClient();
       await redis.setEx(cacheKey, 30, JSON.stringify(response));
     } catch (cacheErr) {
-      console.warn('Failed to cache result:', cacheErr);
+      console.warn("Failed to cache result:", cacheErr);
     }
 
     return NextResponse.json(response, { status: 200 });
   } catch (err: any) {
-    console.error('GET /contests error:', err.message, err.stack);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("GET /contests error:", err.message, err.stack);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   } finally {
     if (client) {
       try {
         await client.release();
       } catch (releaseErr) {
-        console.warn('Failed to release client:', releaseErr);
+        console.warn("Failed to release client:", releaseErr);
       }
     }
   }
@@ -203,8 +217,10 @@ export async function POST(req: NextRequest) {
   let client;
   try {
     // Admin JWT from Authorization header
-    const authHeader = req.headers.get('authorization') || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : undefined;
     verifyAdmin(token);
 
     const body = await req.json();
@@ -221,39 +237,44 @@ export async function POST(req: NextRequest) {
 
     // Emit event
     const channel = await getMqChannel();
-    const eventPayload = Buffer.from(JSON.stringify({ type: 'ContestCreated', data: contest }));
-    channel.publish('contest.events', '', eventPayload);
+    const eventPayload = Buffer.from(
+      JSON.stringify({ type: "ContestCreated", data: contest })
+    );
+    channel.publish("contest.events", "", eventPayload);
 
     // Invalidate cache after creating new contest
     try {
       const redis = await getRedisClient();
-      const keys = await redis.keys('contests:*');
+      const keys = await redis.keys("contests:*");
       if (keys.length > 0) {
         await redis.del(keys);
       }
     } catch (cacheError) {
-      console.warn('Failed to invalidate cache:', cacheError);
+      console.warn("Failed to invalidate cache:", cacheError);
     }
 
     return NextResponse.json(contest, { status: 201 });
   } catch (err: any) {
-    if (err.message === 'Forbidden') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (err.message === "Forbidden") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (err instanceof z.ZodError) {
       return NextResponse.json({ errors: err.errors }, { status: 400 });
     }
-    if (err.message === 'No token provided') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (err.message === "No token provided") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error('POST /contests error:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("POST /contests error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   } finally {
     if (client) {
       try {
         await client.release();
       } catch (releaseErr) {
-        console.warn('Failed to release client:', releaseErr);
+        console.warn("Failed to release client:", releaseErr);
       }
     }
   }
