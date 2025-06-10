@@ -117,15 +117,18 @@ export function Header() {
             <div className="hidden lg:flex items-center space-x-3">
               <span className="text-gray-300 text-sm">Not a Member Yet?</span>
               <Link
-                href="/register"
+                href="/signup"
                 className="text-red-500 hover:text-red-400 text-sm font-medium transition-colors duration-200 hover:underline"
               >
                 Register Now
               </Link>
             </div>
-            <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105">
+            <Link href={"/signin"}>
+                        <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105">
               Log In
             </Button>
+            </Link>
+
           </div>
         </div>
 
@@ -163,7 +166,7 @@ export function Header() {
                   {/* Mobile Auth */}
                   <div className="pt-4 mt-4 border-t border-gray-200">
                     <Link
-                      href="/register"
+                      href="/signin"
                       className="block w-full text-center bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-medium px-4 py-3 rounded-xl transition-all duration-200"
                       onClick={() => setIsMenuOpen(false)}
                     >
